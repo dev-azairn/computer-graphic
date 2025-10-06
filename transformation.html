@@ -13,12 +13,12 @@
 <body>
     <div class="controls" name="">
         <label for="speed">Speed</label>
-        <input type="range" id="speed" min="-100" max="100" step="1"/>
-        <output id="speedValue"></output>
+        <input type="range" id="speed" min="-100" max="100" value="0" step="1"/>
+        <output id="speedValue">0</output>
         <br/>
         <label for="orientation">Orientation</label>
-        <input type="range" id="orientation" min="0" max="360" step="1"/>
-        <output id="orientationValue"></output>
+        <input type="range" id="orientation" min="0" max="360" value="0" step="1"/>
+        <output id="orientationValue">0</output>
         <br/>
         <button type="button" id="translateBtn">Translate Mode</button>
         <button type="button" id="rotateBtn">Rotate Mode</button>
@@ -229,7 +229,10 @@
         function translation(){
             // divided by 60 for pixel per frame   
             function drawTrans(){
-                if (mode !== 'translate') return;
+                if (mode !== 'translate') {
+                    translateBtn.style.backgroundColor = '';
+                    return;
+                }
                 let dx = speedValue*Math.cos(orientationValue/180*Math.PI)/60
                 let dy = speedValue*Math.sin(orientationValue/180*Math.PI)/60
                 points.map((pt) => {pt.x += dx; pt.y += dy})
@@ -244,9 +247,9 @@
             let currentOrient = 0;
 
             function drawRotation() {
-                if (mode !== 'rotate') return;
-                if (Math.abs(currentOrient) >= orientationValue) {
+                if (Math.abs(currentOrient) >= orientationValue || mode != 'rotate') {
                     mode = 'none';
+                    rotateBtn.style.backgroundColor = '';
                     return;
                 }
                 let angle = (speedValue/60)/180 * Math.PI;
@@ -267,7 +270,10 @@
         function scaling() {
             const center = getShapeCenter(points);
             function drawScale(){
-                if (mode !== 'scale') return;
+                if (mode !== 'scale') {
+                    return;
+                    scaleBtn.style.backgroundColor = '';
+                }
                 const scaleFactor = 1 + speedValue/6000;
                 points = points.map(pt => ({
                   x: center.x + (pt.x - center.x)*scaleFactor,
