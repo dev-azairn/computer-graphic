@@ -13,15 +13,18 @@
 <body>
     <div class="controls" name="">
         <label for="speed">Speed</label>
-        <input type="range" id="speed" min="0" max="100" step="1"/>
+        <input type="range" id="speed" min="-100" max="100" step="1"/>
+        <output id="speedValue"></output>
+        <br/>
         <label for="orientation">Orientation</label>
         <input type="range" id="orientation" min="0" max="360" step="1"/>
+        <output id="orientationValue"></output>
+        <br/>
         <button type="button" id="translateBtn">Translate Mode</button>
         <button type="button" id="rotateBtn">Rotate Mode</button>
         <button type="button" id="scaleBtn">ScaleMode</button>
         <button type="button" id="origin">Origin</button>
         <button type="button" id="resetBtn">Reset</button>
-        <button type="button" id="start">Start</button>
     </div>
     <p>Frame Rate: <span id="fps"></span></p>
     <canvas id="myCanvas" width="500" height="300"></canvas>
@@ -36,10 +39,11 @@
         const speedInput = document.getElementById("speed");
         const orientationInput = document.getElementById("orientation");
         const originInput = document.getElementById("origin");
-        const start = document.getElementById("start");
         const fpsBlock = document.getElementById("fps");
         // Get canvas context
         const ctx = canvas.getContext("2d");
+        const outputSpeed = document.getElementById("speedValue");
+        const outputOrient = document.getElementById("orientationValue");
 
         // Default Status
         let points = []
@@ -86,12 +90,12 @@
         
         speedInput.addEventListener('change', (event) => {
             speedValue = event.target.value;
-            console.log(speedValue)
+            outputSpeed.textContent = speedValue;
         })
 
         orientationInput.addEventListener('change', (event) => {
             orientationValue = event.target.value;
-            console.log(orientationValue)
+            outputOrient.textContent = orientationValue;
         })
         // Reset
         resetBtn.addEventListener('click', (event) => {
@@ -105,20 +109,42 @@
 
         // Translate mode
         translateBtn.addEventListener('click', (event) => {
-            if (mode === 'drawing') return; 
+            if (mode === 'translate')
+            {
+                mode = 'none';
+                translateBtn.style.backgroundColor = '';
+                return;
+            }
+            if (mode === 'drawing' || !hasDrawing) return; 
             mode = 'translate';
+            translateBtn.style.backgroundColor = "yellow";
             console.log(mode);  
             translation();
         })
 
         rotateBtn.addEventListener('click', (event) => {
-            if(mode === 'drawing') return; 
+            if (mode === 'rotate')
+            {
+                mode = 'none';
+                rotateBtn.style.backgroundColor = '';
+                return;
+            }
+            if(mode === 'drawing' || !hasDrawing) return; 
             mode = 'rotate';
-            rotation(0);
+            rotateBtn.style.backgroundColor = "yellow"
+            rotation();
         })
 
         scaleBtn.addEventListener('click', (event) => {
-            if(mode !== 'drawing') mode = 'scale';
+            if (mode === 'scale')
+            {
+                mode = 'none';
+                scaleBtn.style.backgroundColor = '';
+                return;
+            }
+            if(mode === 'drawing') return;
+            mode = 'scale';
+            scaling();
         })
 
         originInput.addEventListener('click', (event) => {
@@ -201,30 +227,29 @@
         }
 
         function translation(){
-            // divided by 60 for pixel per frame
-            dx = speedValue*Math.cos(orientationValue/180*Math.PI)/60
-            dy = speedValue*Math.sin(orientationValue/180*Math.PI)/60
+            // divided by 60 for pixel per frame   
             function drawTrans(){
                 if (mode !== 'translate') return;
-                requestAnimationFrame(drawTrans)
+                let dx = speedValue*Math.cos(orientationValue/180*Math.PI)/60
+                let dy = speedValue*Math.sin(orientationValue/180*Math.PI)/60
                 points.map((pt) => {pt.x += dx; pt.y += dy})
                 drawShape();
+                requestAnimationFrame(drawTrans)   
             }
             drawTrans()
         }
 
         function rotation(){
             const center = getShapeCenter(points);
-            let angle = (speedValue/60)/180 * Math.PI;
             let currentOrient = 0;
-            
-            
+
             function drawRotation() {
                 if (mode !== 'rotate') return;
-                if (currentOrient >= orientationValue) {
+                if (Math.abs(currentOrient) >= orientationValue) {
                     mode = 'none';
                     return;
                 }
+                let angle = (speedValue/60)/180 * Math.PI;
                 points.map((pt) => {
                 let translateX = pt.x - center.x;
                 let translateY = pt.y - center.y;
@@ -240,7 +265,20 @@
         }
 
         function scaling() {
-            
+            const center = getShapeCenter(points);
+            function drawScale(){
+                if (mode !== 'scale') return;
+                const scaleFactor = 1 + speedValue/6000;
+                points = points.map(pt => ({
+                  x: center.x + (pt.x - center.x)*scaleFactor,
+                  y: center.y + (pt.y - center.y)*scaleFactor  
+                }))
+                console.log(scaleFactor, scaleFactor)
+                drawShape();
+                requestAnimationFrame(drawScale);
+                
+            } 
+            drawScale();
         }
 
         // Canvas FPS 
@@ -264,7 +302,6 @@
             lastFpsUpdateTime = now;
         }
         }
-
         let lastFpsUpdateTime = performance.now();
         animate();
     </script>
