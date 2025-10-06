@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls" name="">
+        <label for="speed">Speed</label>
+        <input type="range" id="speed" min="0" max="100" step="1"/>
+        <label for="orientation">Orientation</label>
+        <input type="range" id="orientation" min="0" max="360" step="1"/>
+        <button type="button" id="translateBtn">Translate Mode</button>
+        <button type="button" id="rotateBtn">Rotate Mode</button>
+        <button type="button" id="scaleBtn">ScaleMode</button>
+        <button type="button" id="origin">Origin</button>
+        <button type="button" id="resetBtn">Reset</button>
+        <button type="button" id="start">Start</button>
+    </div>
+    <p>Frame Rate: <span id="fps"></span></p>
+    <canvas id="myCanvas" width="500" height="300"></canvas>
+    <script>
+        
+        // Variable Initialization
+        const canvas = document.getElementById("myCanvas");
+        const resetBtn = document.getElementById("resetBtn");
+        const translateBtn = document.getElementById("translateBtn");
+        const rotateBtn = document.getElementById("rotateBtn");
+        const scaleBtn = document.getElementById("scaleBtn");
+        const speedInput = document.getElementById("speed");
+        const orientationInput = document.getElementById("orientation");
+        const originInput = document.getElementById("origin");
+        const start = document.getElementById("start");
+        const fpsBlock = document.getElementById("fps");
+        // Get canvas context
+        const ctx = canvas.getContext("2d");
+
+        // Default Status
+        let points = []
+        let hasDrawing = false;
+        let shape = null;
+        let speedValue = speed.value;
+        let orientationValue = orientation.value;
+        let mode = 'none';
+        let savePosition = null;
+        
+        // On click the canvas
+        canvas.addEventListener('click', (event) => {
+
+            // Get Canvas Data
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            // If already had drawing, no more drawing can be done until the reset button is clicked.
+            if(hasDrawing) return;
+
+
+            // If no mode is on, set to drawing mode
+            if (mode == 'none') {
+                points = [{x, y}];
+                mode = 'drawing';
+                ctx.fillRect(x - 2, y - 2, 4, 4)
+            }
+
+            // Calculate distance (d) = sqrt(dx**2 - dy**2) if it is very close the first point.
+            const distance = Math.sqrt((x - points[0].x) ** 2 + (y - points[0].y) ** 2)
+            if (distance <= 10 && points.length >= 2){
+                points.push({x: points[0].x, y: points[0].y});
+                savePosition = [...points];
+                drawShape();
+                hasDrawing = true;
+                mode = 'none'
+            } else {
+                // Not close, put new vertex
+                points.push({x, y});
+                drawLines();
+            }
+        })
+        
+        speedInput.addEventListener('change', (event) => {
+            speedValue = event.target.value;
+            console.log(speedValue)
+        })
+
+        orientationInput.addEventListener('change', (event) => {
+            orientationValue = event.target.value;
+            console.log(orientationValue)
+        })
+        // Reset
+        resetBtn.addEventListener('click', (event) => {
+            ctx.clearRect(0,0, canvas.width, canvas.height);
+            points = []
+            isDrawing = false;
+            hasDrawing = false;
+            shape = null;
+            mode = 'none';
+        })
+
+        // Translate mode
+        translateBtn.addEventListener('click', (event) => {
+            if (mode === 'drawing') return; 
+            mode = 'translate';
+            console.log(mode);  
+            translation();
+        })
+
+        rotateBtn.addEventListener('click', (event) => {
+            if(mode === 'drawing') return; 
+            mode = 'rotate';
+            rotation(0);
+        })
+
+        scaleBtn.addEventListener('click', (event) => {
+            if(mode !== 'drawing') mode = 'scale';
+        })
+
+        originInput.addEventListener('click', (event) => {
+            mode = 'none';
+            points = [...savePosition]
+            drawShape();
+        })
+
+        const getShapeCenter = (points) => {
+            const sum = points.reduce((acc, p) => {acc.x += p.x; 
+                                                acc.y += p.y;
+                                                return acc}, {x:0, y:0})
+            return {
+                x: sum.x/points.length,
+                y: sum.y/points.length
+            }
+        }
+
+        
+
+        function drawShape() {
+                ctx.clearRect(0,0, canvas.width, canvas.height);
+                if (points.length >= 3) {
+                    ctx.beginPath();
+                    ctx.moveTo(points[0].x, points[0].y);
+
+                    for (let i = 1; i< points.length ; i++)
+                        ctx.lineTo(points[i].x, points[i].y)
+
+                    ctx.closePath();
+                    ctx.strokeStyle = "green";
+                    ctx.stroke();
+                    hasDrawing = true;
+                }
+            }
+
+            // Draw a simple line
+            function drawLines(){
+                bresenhamLine(points[points.length - 2].x, points[points.length - 2].y,
+                points[points.length - 1].x, points[points.length - 1].y)
+            }
+
+            // Function to draw a line
+            function bresenhamLine (x0, y0, x1, y1) {
+            let dx = Math.abs(x1 - x0);
+            let dy = Math.abs(y1 - y0);
+            let swap = (dy > dx)? true : false;
+            if (swap)
+            {
+                [x0, y0] = [y0, x0];
+                [x1, y1] = [y1, x1];
+                [dx, dy] = [dy, dx];
+            }
+            let sx = (x0 < x1)? 1 : -1;
+            let sy = (y0 < y1)? 1 : -1;
+            let p = 2*dy - dx
+
+            function draw() {
+                ctx.fillStyle = "#D02152";
+                if (swap) ctx.fillRect(y0, x0, 2, 2);
+                else ctx.fillRect(x0, y0, 2, 2);
+                if ((x0 === x1))
+                {
+                    ctx.fillStyle = "#128971";
+                    if (swap) ctx.fillRect(y0 - 1, x0 - 1, 4, 4);
+                    else ctx.fillRect(x0 - 1, y0 - 1, 4, 4);
+                    return;
+                }
+                if (p < 0) {
+                  p += 2*dy
+                }
+                else {
+                  p += (2*dy - 2*dx)
+                  y0 += sy
+                }
+                x0 += sx
+                requestAnimationFrame(draw);
+            }
+            draw();
+        }
+
+        function translation(){
+            // divided by 60 for pixel per frame
+            dx = speedValue*Math.cos(orientationValue/180*Math.PI)/60
+            dy = speedValue*Math.sin(orientationValue/180*Math.PI)/60
+            function drawTrans(){
+                if (mode !== 'translate') return;
+                requestAnimationFrame(drawTrans)
+                points.map((pt) => {pt.x += dx; pt.y += dy})
+                drawShape();
+            }
+            drawTrans()
+        }
+
+        function rotation(){
+            const center = getShapeCenter(points);
+            let angle = (speedValue/60)/180 * Math.PI;
+            let currentOrient = 0;
+            
+            
+            function drawRotation() {
+                if (mode !== 'rotate') return;
+                if (currentOrient >= orientationValue) {
+                    mode = 'none';
+                    return;
+                }
+                points.map((pt) => {
+                let translateX = pt.x - center.x;
+                let translateY = pt.y - center.y;
+                pt.x = center.x + (translateX * Math.cos(angle) - translateY * Math.sin(angle));
+                pt.y = center.y + (translateX * Math.sin(angle) + translateY * Math.cos(angle));
+                })
+                drawShape();
+                currentOrient += (speedValue/60);
+                console.log(currentOrient)
+                requestAnimationFrame(drawRotation);
+            }
+            drawRotation()
+        }
+
+        function scaling() {
+            
+        }
+
+        // Canvas FPS 
+        let times = [];
+        let fps = 0;
+
+        function animate() {
+        requestAnimationFrame(animate);
+
+        const now = performance.now();
+        while (times.length > 0 && times[0] <= now - 1000) {
+            times.shift();
+        }
+        times.push(now);
+        fps = times.length;
+
+        // Clear canvas and draw your animation here
+        // Update the FPS display every second
+        if (now - lastFpsUpdateTime >= 1000) {
+            fpsBlock.textContent = `${fps}`;
+            lastFpsUpdateTime = now;
+        }
+        }
+
+        let lastFpsUpdateTime = performance.now();
+        animate();
+    </script>
+</body>
+</html>
