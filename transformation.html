@@ -14,11 +14,11 @@
     <div class="controls" name="">
         <label for="speed">Speed</label>
         <input type="range" id="speed" min="-100" max="100" value="0" step="1"/>
-        <output id="speedValue">0</output>
+        <output id="speedValue">0</output><span id="unit"> px/s</span>
         <br/>
         <label for="orientation">Orientation</label>
         <input type="range" id="orientation" min="0" max="360" value="0" step="1"/>
-        <output id="orientationValue">0</output>
+        <output id="orientationValue"> 0</output><span>deg</span>
         <br/>
         <button type="button" id="translateBtn">Translate Mode</button>
         <button type="button" id="rotateBtn">Rotate Mode</button>
@@ -29,287 +29,466 @@
     <p>Frame Rate: <span id="fps"></span></p>
     <canvas id="myCanvas" width="500" height="300"></canvas>
     <script>
-        
-        // Variable Initialization
-        const canvas = document.getElementById("myCanvas");
-        const resetBtn = document.getElementById("resetBtn");
-        const translateBtn = document.getElementById("translateBtn");
-        const rotateBtn = document.getElementById("rotateBtn");
-        const scaleBtn = document.getElementById("scaleBtn");
-        const speedInput = document.getElementById("speed");
-        const orientationInput = document.getElementById("orientation");
-        const originInput = document.getElementById("origin");
-        const fpsBlock = document.getElementById("fps");
-        // Get canvas context
-        const ctx = canvas.getContext("2d");
-        const outputSpeed = document.getElementById("speedValue");
-        const outputOrient = document.getElementById("orientationValue");
+    // Variable Initialization
+    const canvas = document.getElementById("myCanvas");
+    const resetBtn = document.getElementById("resetBtn");
+    const translateBtn = document.getElementById("translateBtn");
+    const rotateBtn = document.getElementById("rotateBtn");
+    const scaleBtn = document.getElementById("scaleBtn");
+    const speedInput = document.getElementById("speed");
+    const orientationInput = document.getElementById("orientation");
+    const originInput = document.getElementById("origin");
+    const fpsBlock = document.getElementById("fps");
+    // Get canvas context
+    const ctx = canvas.getContext("2d");
+    const outputSpeed = document.getElementById("speedValue");
+    const outputOrient = document.getElementById("orientationValue");
+    const unit = document.getElementById("unit")
 
-        // Default Status
-        let points = []
-        let hasDrawing = false;
-        let shape = null;
-        let speedValue = speed.value;
-        let orientationValue = orientation.value;
-        let mode = 'none';
-        let savePosition = null;
-        
-        // On click the canvas
-        canvas.addEventListener('click', (event) => {
+    // Default Status
+    let points = []
+    let hasDrawing = false;
+    let shape = null;
+    let speedValue = speedInput.value; // Use speedInput.value instead of undefined speed.value
+    let orientationValue = orientationInput.value; // Use orientationInput.value
+    let mode = 'none';
+    let savePosition = null;
+    
+    // On click the canvas
+    canvas.addEventListener('click', (event) => {
 
-            // Get Canvas Data
-            const rect = canvas.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const y = event.clientY - rect.top;
+        // Get Canvas Data
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
 
-            // If already had drawing, no more drawing can be done until the reset button is clicked.
-            if(hasDrawing) return;
+        // If already had drawing, no more drawing can be done until the reset button is clicked.
+        if(hasDrawing) return;
 
 
-            // If no mode is on, set to drawing mode
-            if (mode == 'none') {
-                points = [{x, y}];
-                mode = 'drawing';
-                ctx.fillRect(x - 2, y - 2, 4, 4)
-            }
+        // If no mode is on, set to drawing mode
+        if (mode == 'none') {
+            points = [{x, y}];
+            mode = 'drawing';
+            ctx.fillRect(x - 2, y - 2, 4, 4)
+        }
 
-            // Calculate distance (d) = sqrt(dx**2 - dy**2) if it is very close the first point.
-            const distance = Math.sqrt((x - points[0].x) ** 2 + (y - points[0].y) ** 2)
-            if (distance <= 10 && points.length >= 2){
-                points.push({x: points[0].x, y: points[0].y});
-                savePosition = [...points];
-                drawShape();
-                hasDrawing = true;
-                mode = 'none'
-            } else {
-                // Not close, put new vertex
-                points.push({x, y});
-                drawLines();
-            }
-        })
-        
-        speedInput.addEventListener('change', (event) => {
-            speedValue = event.target.value;
-            outputSpeed.textContent = speedValue;
-        })
+        // Calculate distance (d) = sqrt(dx**2 - dy**2) if it is very close the first point.
+        const distance = Math.sqrt((x - points[0].x) ** 2 + (y - points[0].y) ** 2)
+        if (distance <= 10 && points.length >= 2){
+            points.push({x: points[0].x, y: points[0].y});
+            savePosition = [...points];
+            drawShape();
+            hasDrawing = true;
+            mode = 'none'
+        } else {
+            // Not close, put new vertex
+            points.push({x, y});
+            drawLines();
+        }
+    })
+    
+    speedInput.addEventListener('change', (event) => {
+        speedValue = parseFloat(event.target.value); // Ensure it's a number
+        outputSpeed.textContent = speedValue;
+    })
 
-        orientationInput.addEventListener('change', (event) => {
-            orientationValue = event.target.value;
-            outputOrient.textContent = orientationValue;
-        })
-        // Reset
-        resetBtn.addEventListener('click', (event) => {
-            ctx.clearRect(0,0, canvas.width, canvas.height);
-            points = []
-            isDrawing = false;
-            hasDrawing = false;
-            shape = null;
+    orientationInput.addEventListener('change', (event) => {
+        orientationValue = parseFloat(event.target.value); // Ensure it's a number
+        outputOrient.textContent = orientationValue;
+    })
+    // Reset
+    resetBtn.addEventListener('click', (event) => {
+        ctx.clearRect(0,0, canvas.width, canvas.height);
+        points = []
+        isDrawing = false;
+        hasDrawing = false;
+        shape = null;
+        mode = 'none';
+        translateBtn.style.backgroundColor = '';
+        rotateBtn.style.backgroundColor = '';
+        scaleBtn.style.backgroundColor = '';
+    })
+
+    // Translate mode
+    translateBtn.addEventListener('click', (event) => {
+        if (mode === 'translate')
+        {
             mode = 'none';
-        })
+            translateBtn.style.backgroundColor = '';
+            return;
+        }
+        if (mode === 'drawing' || !hasDrawing) return; 
+        mode = 'translate';
+        unit.textContent = " px/s"
+        translateBtn.style.backgroundColor = "yellow";
+        translation();
+    })
 
-        // Translate mode
-        translateBtn.addEventListener('click', (event) => {
-            if (mode === 'translate')
+    rotateBtn.addEventListener('click', (event) => {
+        if (mode === 'rotate')
+        {
+            mode = 'none';
+            rotateBtn.style.backgroundColor = '';
+            return;
+        }
+        if(mode === 'drawing' || !hasDrawing) return; 
+        mode = 'rotate';
+        unit.textContent = " deg/s"
+        rotateBtn.style.backgroundColor = "yellow"
+        rotation();
+    })
+
+    scaleBtn.addEventListener('click', (event) => {
+        if (mode === 'scale')
+        {
+            mode = 'none';
+            scaleBtn.style.backgroundColor = '';
+            return;
+        }
+        if(mode === 'drawing' || !hasDrawing) return; // Added !hasDrawing check
+        mode = 'scale';
+        unit.textContent = " px/s"
+        scaleBtn.style.backgroundColor = "yellow"; // Added color change
+        scaling();
+    })
+
+    originInput.addEventListener('click', (event) => {
+        mode = 'none';
+        points = [...savePosition]
+        drawShape();
+    })
+
+    const getShapeCenter = (points) => {
+        // Exclude the closing point from the center calculation to prevent errors if the loop isn't finished
+        const calculationPoints = points.slice(0, points.length > 0 && points[0].x === points[points.length-1].x && points[0].y === points[points.length-1].y ? points.length-1 : points.length);
+
+        if (calculationPoints.length === 0) return { x: 0, y: 0 };
+        
+        const sum = calculationPoints.reduce((acc, p) => {
+            acc.x += p.x; 
+            acc.y += p.y;
+            return acc
+        }, {x:0, y:0})
+        
+        return {
+            x: sum.x/calculationPoints.length,
+            y: sum.y/calculationPoints.length
+        }
+    }
+
+    
+
+    function drawShape() {
+            ctx.clearRect(0,0, canvas.width, canvas.height);
+            if (points.length >= 3) {
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+
+                for (let i = 1; i< points.length ; i++)
+                    ctx.lineTo(points[i].x, points[i].y)
+
+                ctx.closePath();
+                
+                ctx.fillStyle = "orange";
+                ctx.fill();
+
+                ctx.strokeStyle = "black";
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.lineWidth = 1;
+                hasDrawing = true;
+            }
+        }
+
+        // Draw a simple line
+        function drawLines(){
+            bresenhamLine(points[points.length - 2].x, points[points.length - 2].y,
+            points[points.length - 1].x, points[points.length - 1].y)
+        }
+
+        // Function to draw a line
+        function bresenhamLine (x0, y0, x1, y1) {
+        let dx = Math.abs(x1 - x0);
+        let dy = Math.abs(y1 - y0);
+        let swap = (dy > dx)? true : false;
+        if (swap)
+        {
+            [x0, y0] = [y0, x0];
+            [x1, y1] = [y1, x1];
+            [dx, dy] = [dy, dx];
+        }
+        let sx = (x0 < x1)? 1 : -1;
+        let sy = (y0 < y1)? 1 : -1;
+        let p = 2*dy - dx
+
+        function draw() {
+            ctx.fillStyle = "#D02152";
+            if (swap) ctx.fillRect(y0, x0, 2, 2);
+            else ctx.fillRect(x0, y0, 2, 2);
+            if ((x0 === x1))
             {
-                mode = 'none';
+                ctx.fillStyle = "#128971";
+                if (swap) ctx.fillRect(y0 - 1, x0 - 1, 4, 4);
+                else ctx.fillRect(x0 - 1, y0 - 1, 4, 4);
+                return;
+            }
+            if (p < 0) {
+              p += 2*dy
+            }
+            else {
+              p += (2*dy - 2*dx)
+              y0 += sy
+            }
+            x0 += sx
+            requestAnimationFrame(draw);
+        }
+        draw();
+    }
+
+    function translation(){
+        // divided by 60 for pixel per frame   
+        function drawTrans(){
+            if (mode !== 'translate') {
                 translateBtn.style.backgroundColor = '';
                 return;
             }
-            if (mode === 'drawing' || !hasDrawing) return; 
-            mode = 'translate';
-            translateBtn.style.backgroundColor = "yellow";
-            console.log(mode);  
-            translation();
-        })
+            
+            // NOTE: The visualization uses orientationValue, but the movement 
+            // is hardcoded to be horizontal in your translation logic.
+            // Let's use the full angle for movement consistency with the visualization
+            const angle = orientationValue / 180 * Math.PI;
+            let dx = speedValue * Math.cos(angle) / 60
+            let dy = speedValue * Math.sin(angle) / 60
+            
+            points.map((pt) => {pt.x += dx; pt.y += dy})
+            drawShape();
+            
+            // This is the key line: Call calculateDisplacements for 10s vector
+            drawVelocityArrows(calculateDisplacements(points, mode, speedValue));
+            
+            requestAnimationFrame(drawTrans)   
+        }
+        drawTrans()
+    }
 
-        rotateBtn.addEventListener('click', (event) => {
-            if (mode === 'rotate')
-            {
-                mode = 'none';
+    function rotation(){
+        const center = getShapeCenter(points);
+        let currentOrient = 0;
+
+        function drawRotation() {
+            // Note: rotation should continue even if currentOrient exceeds orientationValue
+            // if the user holds the button or speed is non-zero. 
+            if (mode != 'rotate' || currentOrient >= orientationValue) { 
                 rotateBtn.style.backgroundColor = '';
                 return;
             }
-            if(mode === 'drawing' || !hasDrawing) return; 
-            mode = 'rotate';
-            rotateBtn.style.backgroundColor = "yellow"
-            rotation();
-        })
+            let angle = (speedValue/60)/180 * Math.PI;
+            points.map((pt) => {
+            let translateX = pt.x - center.x;
+            let translateY = pt.y - center.y;
+            pt.x = center.x + (translateX * Math.cos(angle) - translateY * Math.sin(angle));
+            pt.y = center.y + (translateX * Math.sin(angle) + translateY * Math.cos(angle));
+            })
+            drawShape();
+            drawVelocityArrows(calculateDisplacements(points, mode, speedValue));
+            // currentOrient tracks accumulated rotation for potential stopping condition (though currently disabled)
+            currentOrient += (speedValue/60); 
+            requestAnimationFrame(drawRotation);
+        }
+        drawRotation()
+    }
 
-        scaleBtn.addEventListener('click', (event) => {
-            if (mode === 'scale')
-            {
-                mode = 'none';
-                scaleBtn.style.backgroundColor = '';
+    function scaling() {
+        const center = getShapeCenter(points);
+        function drawScale(){
+            if (mode !== 'scale') {
+                scaleBtn.style.backgroundColor = ''; // Fix: ensure button color resets
                 return;
             }
-            if(mode === 'drawing') return;
-            mode = 'scale';
-            scaling();
-        })
-
-        originInput.addEventListener('click', (event) => {
-            mode = 'none';
-            points = [...savePosition]
+            const scaleFactor = 1 + speedValue/6000;
+            points = points.map(pt => ({
+                x: center.x + (pt.x - center.x)*scaleFactor,
+                y: center.y + (pt.y - center.y)*scaleFactor  
+            }))
             drawShape();
-        })
+            
+            // This is the key line: Call calculateDisplacements for 10s vector
+            drawVelocityArrows(calculateDisplacements(points, mode, speedValue));
+            
+            requestAnimationFrame(drawScale);
+            
+        } 
+        drawScale();
+    }
 
-        const getShapeCenter = (points) => {
-            const sum = points.reduce((acc, p) => {acc.x += p.x; 
-                                                acc.y += p.y;
-                                                return acc}, {x:0, y:0})
-            return {
-                x: sum.x/points.length,
-                y: sum.y/points.length
-            }
-        }
+    // Canvas FPS 
+    let times = [];
+    let fps = 0;
 
+    function animate() {
+    requestAnimationFrame(animate);
+
+    const now = performance.now();
+    while (times.length > 0 && times[0] <= now - 1000) {
+        times.shift();
+    }
+    times.push(now);
+    fps = times.length;
+
+    // Update the FPS display every second
+    if (now - lastFpsUpdateTime >= 1000) {
+        fpsBlock.textContent = `${fps}`;
+        lastFpsUpdateTime = now;
+    }
+    }
+    let lastFpsUpdateTime = performance.now();
+    animate();
+
+
+    const DEGREES_TO_RADIANS = Math.PI / 180;
+
+    // Calculate arrow displacements from v = d/t by t = 1 sec, v = speed, d = displacement
+
+    function calculateDisplacements(points, mode, speedValue) {
+        // Exclude the closing point of the polygon
+        const uniquePoints = points.slice(0, points.length - 1);
+        if (uniquePoints.length === 0) return [];
+        let displacements = [];
+        let center = { x: 0, y: 0 };
         
-
-        function drawShape() {
-                ctx.clearRect(0,0, canvas.width, canvas.height);
-                if (points.length >= 3) {
-                    ctx.beginPath();
-                    ctx.moveTo(points[0].x, points[0].y);
-
-                    for (let i = 1; i< points.length ; i++)
-                        ctx.lineTo(points[i].x, points[i].y)
-
-                    ctx.closePath();
-                    ctx.strokeStyle = "green";
-                    ctx.stroke();
-                    hasDrawing = true;
-                }
-            }
-
-            // Draw a simple line
-            function drawLines(){
-                bresenhamLine(points[points.length - 2].x, points[points.length - 2].y,
-                points[points.length - 1].x, points[points.length - 1].y)
-            }
-
-            // Function to draw a line
-            function bresenhamLine (x0, y0, x1, y1) {
-            let dx = Math.abs(x1 - x0);
-            let dy = Math.abs(y1 - y0);
-            let swap = (dy > dx)? true : false;
-            if (swap)
-            {
-                [x0, y0] = [y0, x0];
-                [x1, y1] = [y1, x1];
-                [dx, dy] = [dy, dx];
-            }
-            let sx = (x0 < x1)? 1 : -1;
-            let sy = (y0 < y1)? 1 : -1;
-            let p = 2*dy - dx
-
-            function draw() {
-                ctx.fillStyle = "#D02152";
-                if (swap) ctx.fillRect(y0, x0, 2, 2);
-                else ctx.fillRect(x0, y0, 2, 2);
-                if ((x0 === x1))
-                {
-                    ctx.fillStyle = "#128971";
-                    if (swap) ctx.fillRect(y0 - 1, x0 - 1, 4, 4);
-                    else ctx.fillRect(x0 - 1, y0 - 1, 4, 4);
-                    return;
-                }
-                if (p < 0) {
-                  p += 2*dy
-                }
-                else {
-                  p += (2*dy - 2*dx)
-                  y0 += sy
-                }
-                x0 += sx
-                requestAnimationFrame(draw);
-            }
-            draw();
+        // Calculate center only once if needed
+        if (mode === 'rotate' || mode === 'scale') {
+            center = getShapeCenter(points); 
         }
+        uniquePoints.forEach(p => {
+            let dx = 0;
+            let dy = 0;
 
-        function translation(){
-            // divided by 60 for pixel per frame   
-            function drawTrans(){
-                if (mode !== 'translate') {
-                    translateBtn.style.backgroundColor = '';
-                    return;
-                }
-                let dx = speedValue*Math.cos(orientationValue/180*Math.PI)/60
-                let dy = speedValue*Math.sin(orientationValue/180*Math.PI)/60
-                points.map((pt) => {pt.x += dx; pt.y += dy})
-                drawShape();
-                requestAnimationFrame(drawTrans)   
-            }
-            drawTrans()
-        }
-
-        function rotation(){
-            const center = getShapeCenter(points);
-            let currentOrient = 0;
-
-            function drawRotation() {
-                if (Math.abs(currentOrient) >= orientationValue || mode != 'rotate') {
-                    mode = 'none';
-                    rotateBtn.style.backgroundColor = '';
-                    return;
-                }
-                let angle = (speedValue/60)/180 * Math.PI;
-                points.map((pt) => {
-                let translateX = pt.x - center.x;
-                let translateY = pt.y - center.y;
-                pt.x = center.x + (translateX * Math.cos(angle) - translateY * Math.sin(angle));
-                pt.y = center.y + (translateX * Math.sin(angle) + translateY * Math.cos(angle));
-                })
-                drawShape();
-                currentOrient += (speedValue/60);
-                console.log(currentOrient)
-                requestAnimationFrame(drawRotation);
-            }
-            drawRotation()
-        }
-
-        function scaling() {
-            const center = getShapeCenter(points);
-            function drawScale(){
-                if (mode !== 'scale') {
-                    return;
-                    scaleBtn.style.backgroundColor = '';
-                }
-                const scaleFactor = 1 + speedValue/6000;
-                points = points.map(pt => ({
-                  x: center.x + (pt.x - center.x)*scaleFactor,
-                  y: center.y + (pt.y - center.y)*scaleFactor  
-                }))
-                console.log(scaleFactor, scaleFactor)
-                drawShape();
-                requestAnimationFrame(drawScale);
+            if (mode === 'translate') {
+                // 1. Translation: Use the orientation value to find the displacement vector
+                const angle = orientationValue * DEGREES_TO_RADIANS;
+                dx = speedValue * Math.cos(angle);
+                dy = speedValue * Math.sin(angle) ;
                 
-            } 
-            drawScale();
-        }
+            } else if (mode === 'rotate') {
+                // 2. Rotation: Calculate total angle over 10 seconds
+                // Assumes speedValue is degrees/second
+                const totalAngle = (speedValue) * DEGREES_TO_RADIANS;
+                
+                const x_rel = p.x - center.x;
+                const y_rel = p.y - center.y;
+                
+                // Rotation Transformation
+                const x_prime = x_rel * Math.cos(totalAngle) - y_rel * Math.sin(totalAngle);
+                const y_prime = x_rel * Math.sin(totalAngle) + y_rel * Math.cos(totalAngle);
+                
+                // Displacement is the change (New Position - Original Position)
+                dx = x_prime - x_rel;
+                dy = y_prime - y_rel;
+                
+            } else if (mode === 'scale') {
+                // 3. Scaling: Compounded scale factor over 10 seconds
+                const factor_1s = 1 + (speedValue / 100); 
 
-        // Canvas FPS 
-        let times = [];
-        let fps = 0;
+                const x_rel = p.x - center.x;
+                const y_rel = p.y - center.y;
+                
+                // Displacement is the relative position scaled by the total change factor (k_10s - 1)
+                dx = x_rel * (factor_1s - 1);
+                dy = y_rel * (factor_1s - 1);
+            }
 
-        function animate() {
-        requestAnimationFrame(animate);
+            displacements.push({ dx, dy });
+        });
 
-        const now = performance.now();
-        while (times.length > 0 && times[0] <= now - 1000) {
-            times.shift();
-        }
-        times.push(now);
-        fps = times.length;
+        return displacements;
+    }
+    
+    function drawArrow(ctx, x, y, dx, dy, color = "red") { 
+        
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 2;
 
-        // Clear canvas and draw your animation here
-        // Update the FPS display every second
-        if (now - lastFpsUpdateTime >= 1000) {
-            fpsBlock.textContent = `${fps}`;
-            lastFpsUpdateTime = now;
+        // 1. Calculate the magnitude (length) of the 10-second displacement vector.
+        const displacementLength = Math.sqrt(dx * dx + dy * dy);
+        
+        // Don't draw if the vector is near zero (e.g., speed < 0.1 pixels/sec).
+        if (displacementLength < 0.1) return; 
+
+        // 2. The arrow tip is now simply the starting point plus the displacement vector.
+        // This makes the arrow length equal to the 10-second displacement in pixels.
+        const arrowTipX = x + dx;
+        const arrowTipY = y + dy;
+        
+        // Draw the line (tail to tip)
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(arrowTipX, arrowTipY);
+        ctx.stroke();
+
+        // --- Draw the arrowhead at the calculated tip ---
+        const angle = Math.atan2(dy, dx); // Angle of the displacement vector
+        const headLength = 8; // A fixed size for the arrowhead
+        const headAngle = Math.PI / 6; 
+
+        // Draw one wing
+        ctx.beginPath();
+        ctx.moveTo(arrowTipX, arrowTipY);
+        ctx.lineTo(
+            arrowTipX - headLength * Math.cos(angle - headAngle),
+            arrowTipY - headLength * Math.sin(angle - headAngle)
+        );
+        ctx.stroke();
+
+        // Draw the other wing
+        ctx.beginPath();
+        ctx.moveTo(arrowTipX, arrowTipY);
+        ctx.lineTo(
+            arrowTipX - headLength * Math.cos(angle + headAngle),
+            arrowTipY - headLength * Math.sin(angle + headAngle)
+        );
+        ctx.stroke();
+        ctx.lineWidth = 1; // Reset line width
+    }
+
+    // Function to draw the velocity arrows for the current mode
+    function drawVelocityArrows(displacements) {
+        // Check flags to see if we should draw the arrows
+        if (!hasDrawing || mode === 'none' || mode === 'drawing') return;
+
+        // This ensures we have the correct starting points for the arrows
+        const uniquePoints = points.slice(0, points.length - 1);
+        
+        if (mode === 'translate' || mode === 'rotate' || mode === 'scale') {
+            
+            // Determine color based on mode and speed direction
+            let color = "red"; // Default for translate (or negative speed)
+            if (mode === 'rotate') color = speedValue > 0 ? "green" : "red";
+            if (mode === 'scale') color = speedValue > 0 ? "green" : "red";
+            
+            // 1. Iterate over the displacement vectors
+            displacements.forEach((disp, index) => {
+                // 2. Get the starting point (pt) for the arrow
+                const pt = uniquePoints[index];
+                
+                // 3. Draw the arrow using the point's coordinates (pt.x, pt.y) 
+                // and the displacement vector (disp.dx, disp.dy)
+                drawArrow(ctx, pt.x, pt.y, disp.dx, disp.dy, color); 
+            });
+
+        } 
+        
+        // Draw the center marker for rotation/scaling modes
+        if (mode === 'rotate' || mode === 'scale') {
+            const center = getShapeCenter(points);
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, 4, 0, 2 * Math.PI);
+            ctx.fillStyle = "blue";
+            ctx.fill();
         }
-        }
-        let lastFpsUpdateTime = performance.now();
-        animate();
-    </script>
+    }
+</script>
 </body>
 </html>
