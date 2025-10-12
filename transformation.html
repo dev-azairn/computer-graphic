@@ -270,8 +270,9 @@
         let currentOrient = 0;
 
         function drawRotation() {
-            if (mode != 'rotate' || Math.abs(currentOrient) >= ((speedValue < 0)? 360 - orientationValue: orientationValue)) { 
+            if (mode !== 'rotate' || Math.abs(currentOrient) >= ((speedValue < 0)? 360 - orientationValue: orientationValue)) { 
                 rotateBtn.style.backgroundColor = '';
+                mode = 'none'
                 return;
             }
             let angle = (speedValue/60)/180 * Math.PI;
